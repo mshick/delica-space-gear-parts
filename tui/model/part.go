@@ -60,6 +60,8 @@ func NewPartDetailModel(database *db.DB, partID int, dataPath string) *PartDetai
 	ti.SetWidth(40)
 	ti.SetHeight(3)
 	ti.CharLimit = 500
+	ti.ShowLineNumbers = false
+	ti.Prompt = ""
 
 	// Get all subgroups containing this part number
 	var subgroups []db.SubgroupWithGroup
