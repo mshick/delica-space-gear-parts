@@ -16,6 +16,7 @@ A tool for scraping and browsing parts data from the Mitsubishi Delica Space Gea
 
 - [Deno](https://deno.land/) (v1.40+)
 - [Go](https://golang.org/) (v1.21+)
+- [Ghostty](https://ghostty.org) (or any terminal that supports [kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol/))
 
 ## Quick Start
 
