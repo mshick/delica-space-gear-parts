@@ -9,6 +9,7 @@ const (
 	ScreenPartDetail
 	ScreenSearch
 	ScreenBookmarks
+	ScreenNotes
 )
 
 type Screen struct {
@@ -42,4 +43,8 @@ func SearchScreen(query string) Screen {
 
 func BookmarksScreen() Screen {
 	return Screen{Type: ScreenBookmarks}
+}
+
+func NotesScreen() Screen {
+	return Screen{Type: ScreenNotes}
 }
