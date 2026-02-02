@@ -32,6 +32,21 @@ func Open(path string) (*DB, error) {
 		return nil, fmt.Errorf("create bookmarks table: %w", err)
 	}
 
+	// Ensure notes table exists
+	err = sqlitex.ExecuteTransient(conn, `
+		CREATE TABLE IF NOT EXISTS notes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			part_id INTEGER NOT NULL UNIQUE,
+			content TEXT NOT NULL,
+			created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+			updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`, nil)
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("create notes table: %w", err)
+	}
+
 	return &DB{conn: conn}, nil
 }
 
