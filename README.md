@@ -6,11 +6,11 @@ A tool for scraping and browsing parts data from the Mitsubishi Delica Space Gea
 
 ### Initial Screen
 
-[initial menu](./docs/images/initial.png)
+![initial menu](./docs/images/initial.png)
 
 ### Part Details Screen
 
-[part details](./docs/images/part-details.png)
+![part details](./docs/images/part-details.png)
 
 ## Prerequisites
 
