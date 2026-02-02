@@ -12,6 +12,7 @@ import (
 	"delica-tui/image"
 	"delica-tui/ui"
 
+	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -29,6 +30,11 @@ type PartDetailModel struct {
 	subgroups  []db.SubgroupWithGroup
 	links      []string // URLs for external links
 	cursor     int      // unified cursor for subgroups + links
+
+	// Note editing
+	note        *string
+	editingNote bool
+	noteInput   textarea.Model
 }
 
 func NewPartDetailModel(database *db.DB, partID int, dataPath string) *PartDetailModel {
@@ -46,6 +52,14 @@ func NewPartDetailModel(database *db.DB, partID int, dataPath string) *PartDetai
 	}
 
 	isBookmark, _ := database.IsBookmarked(partID)
+	note, _ := database.GetNote(partID)
+
+	// Initialize textarea for note editing
+	ti := textarea.New()
+	ti.Placeholder = "Add a note..."
+	ti.SetWidth(40)
+	ti.SetHeight(3)
+	ti.CharLimit = 500
 
 	// Get all subgroups containing this part number
 	var subgroups []db.SubgroupWithGroup
@@ -100,6 +114,9 @@ func NewPartDetailModel(database *db.DB, partID int, dataPath string) *PartDetai
 		subgroups:  subgroups,
 		links:      links,
 		cursor:     0,
+		note:        note,
+		editingNote: false,
+		noteInput:   ti,
 	}
 
 	// Load image - use larger size for better visibility
@@ -143,6 +160,35 @@ func openURL(url string) error {
 }
 
 func (m *PartDetailModel) Update(msg tea.Msg) (*PartDetailModel, tea.Cmd, *Screen) {
+	// Handle note editing mode
+	if m.editingNote {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			if ui.IsSaveNote(msg) {
+				// Save or delete note
+				content := strings.TrimSpace(m.noteInput.Value())
+				if content == "" {
+					m.db.RemoveNote(m.partID)
+					m.note = nil
+				} else {
+					m.db.SetNote(m.partID, content)
+					m.note = &content
+				}
+				m.editingNote = false
+				return m, nil, nil
+			}
+			if ui.IsBack(msg) {
+				// Cancel editing
+				m.editingNote = false
+				return m, nil, nil
+			}
+		}
+		// Pass all other keys to textarea
+		var cmd tea.Cmd
+		m.noteInput, cmd = m.noteInput.Update(msg)
+		return m, cmd, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		totalItems := m.totalItems()
@@ -185,6 +231,18 @@ func (m *PartDetailModel) Update(msg tea.Msg) (*PartDetailModel, tea.Cmd, *Scree
 				m.db.AddBookmark(m.partID)
 				m.isBookmark = true
 			}
+		}
+
+		if ui.IsNote(msg) {
+			// Enter note editing mode
+			m.editingNote = true
+			if m.note != nil {
+				m.noteInput.SetValue(*m.note)
+			} else {
+				m.noteInput.SetValue("")
+			}
+			m.noteInput.Focus()
+			return m, textarea.Blink, nil
 		}
 	}
 	return m, nil, nil
@@ -307,6 +365,24 @@ func (m *PartDetailModel) renderPartInfo() string {
 		b.WriteString("\n")
 	}
 
+	// User note
+	if m.note != nil && !m.editingNote {
+		b.WriteString("\n")
+		b.WriteString(ui.DimStyle.Render("My Note:"))
+		b.WriteString("\n")
+		b.WriteString(*m.note)
+		b.WriteString("\n")
+	}
+
+	// Note editor
+	if m.editingNote {
+		b.WriteString("\n")
+		b.WriteString(ui.DimStyle.Render("My Note:"))
+		b.WriteString("\n")
+		b.WriteString(m.noteInput.View())
+		b.WriteString("\n")
+	}
+
 	b.WriteString("\n")
 	b.WriteString(ui.DimStyle.Render("─────────────────────────────────────"))
 	b.WriteString("\n\n")
@@ -354,11 +430,19 @@ func (m *PartDetailModel) renderPartInfo() string {
 	b.WriteString("\n")
 
 	// Footer
-	bookmarkAction := "bookmark"
-	if m.isBookmark {
-		bookmarkAction = "unbookmark"
+	if m.editingNote {
+		b.WriteString(ui.DimStyle.Render("ctrl+s save   esc cancel"))
+	} else {
+		bookmarkAction := "bookmark"
+		if m.isBookmark {
+			bookmarkAction = "unbookmark"
+		}
+		noteAction := "note"
+		if m.note != nil {
+			noteAction = "edit note"
+		}
+		b.WriteString(ui.DimStyle.Render(fmt.Sprintf("esc back   ↑↓ navigate   enter select   b %s   n %s", bookmarkAction, noteAction)))
 	}
-	b.WriteString(ui.DimStyle.Render(fmt.Sprintf("esc back   ↑↓ navigate   enter select   b %s", bookmarkAction)))
 
 	return b.String()
 }
