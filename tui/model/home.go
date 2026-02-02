@@ -18,21 +18,9 @@ func getVehicleInfo() (name, frame, exterior, interior, date string) {
 		name = "Mitsubishi Delica Space Gear"
 	}
 	frame = os.Getenv("FRAME_NO")
-	if frame == "" {
-		frame = "PD6W-0500900"
-	}
 	exterior = os.Getenv("EXTERIOR_CODE")
-	if exterior == "" {
-		exterior = "W09M"
-	}
 	interior = os.Getenv("INTERIOR_CODE")
-	if interior == "" {
-		interior = "57A"
-	}
 	date = os.Getenv("MANUFACTURE_DATE")
-	if date == "" {
-		date = "1999.08.3"
-	}
 	return
 }
 

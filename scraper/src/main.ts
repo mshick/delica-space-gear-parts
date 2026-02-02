@@ -1,8 +1,3 @@
-import { load as loadEnv } from "@std/dotenv";
-
-// Load .env file from project root before importing config
-await loadEnv({ envPath: "../.env", export: true });
-
 import { getClient, closeClient } from "./db/client.ts";
 import { createSchema, runMigrations } from "./db/schema.ts";
 import {

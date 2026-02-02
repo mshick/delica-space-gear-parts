@@ -310,8 +310,8 @@ export class Scraper {
       }
     } else {
       // Fallback: no mapping found (page visited before subgroup page, or single-page subgroup)
-      // Create diagram on demand (preserves old behavior for edge cases)
-      const diagramId = pathParts.slice(3).join("-").replace(/,/g, "_");
+      // Create diagram on demand using consistent ID from group/subgroup only (not detail page ID)
+      const diagramId = subgroupSlug ? `${groupSlug}/${subgroupSlug}` : groupSlug;
       const { diagram, parts } = parsePartsPage(html, url, diagramId);
       const pnc = parts.length > 0 ? parts[0].pnc : null;
 

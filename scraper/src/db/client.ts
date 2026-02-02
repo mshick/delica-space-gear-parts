@@ -1,4 +1,4 @@
-import { createClient, type Client } from "npm:@libsql/client/node";
+import { createClient, type Client } from "@libsql/client/node";
 
 let client: Client | null = null;
 

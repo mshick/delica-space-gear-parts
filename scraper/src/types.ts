@@ -103,9 +103,15 @@ export interface ScraperConfig {
 }
 
 // Load from environment variables with fallbacks
-const frameName = Deno.env.get("FRAME_NAME") || "pd6w";
-const trimCode = Deno.env.get("TRIM_CODE") || "hseue9";
-const frameNumber = Deno.env.get("FRAME_NO") || "PD6W-0500900";
+const frameName = Deno.env.get("FRAME_NAME");
+const trimCode = Deno.env.get("TRIM_CODE");
+const frameNumber = Deno.env.get("FRAME_NO");
+
+if (!frameName || !trimCode || !frameNumber) {
+  throw new Error(
+    "Missing required environment variables: FRAME_NAME, TRIM_CODE, FRAME_NO",
+  );
+}
 
 export const DEFAULT_CONFIG: ScraperConfig = {
   baseUrl: `https://mitsubishi.epc-data.com/delica_space_gear/${frameName}/${trimCode}/`,

@@ -5,6 +5,7 @@
  */
 
 import { load as loadCheerio } from "cheerio";
+import { load as loadEnv } from "@std/dotenv";
 
 const ENV_PATH = "../.env";
 
@@ -18,34 +19,15 @@ interface EnvVars {
   MANUFACTURE_DATE?: string;
 }
 
-async function loadEnv(): Promise<EnvVars> {
-  try {
-    const content = await Deno.readTextFile(ENV_PATH);
-    const vars: EnvVars = {};
-    for (const line of content.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eqIndex = trimmed.indexOf("=");
-      if (eqIndex === -1) continue;
-      const key = trimmed.slice(0, eqIndex).trim();
-      const value = trimmed.slice(eqIndex + 1).trim();
-      (vars as Record<string, string>)[key] = value;
-    }
-    return vars;
-  } catch {
-    return {};
-  }
-}
-
 async function saveEnv(vars: EnvVars): Promise<void> {
   const lines: string[] = [];
-  if (vars.FRAME_NO) lines.push(`FRAME_NO=${vars.FRAME_NO}`);
-  if (vars.VEHICLE_NAME) lines.push(`VEHICLE_NAME=${vars.VEHICLE_NAME}`);
-  if (vars.FRAME_NAME) lines.push(`FRAME_NAME=${vars.FRAME_NAME}`);
-  if (vars.TRIM_CODE) lines.push(`TRIM_CODE=${vars.TRIM_CODE}`);
-  if (vars.EXTERIOR_CODE) lines.push(`EXTERIOR_CODE=${vars.EXTERIOR_CODE}`);
-  if (vars.INTERIOR_CODE) lines.push(`INTERIOR_CODE=${vars.INTERIOR_CODE}`);
-  if (vars.MANUFACTURE_DATE) lines.push(`MANUFACTURE_DATE=${vars.MANUFACTURE_DATE}`);
+  if (vars.FRAME_NO) lines.push(`FRAME_NO='${vars.FRAME_NO}'`);
+  if (vars.VEHICLE_NAME) lines.push(`VEHICLE_NAME='${vars.VEHICLE_NAME}'`);
+  if (vars.FRAME_NAME) lines.push(`FRAME_NAME='${vars.FRAME_NAME}'`);
+  if (vars.TRIM_CODE) lines.push(`TRIM_CODE='${vars.TRIM_CODE}'`);
+  if (vars.EXTERIOR_CODE) lines.push(`EXTERIOR_CODE='${vars.EXTERIOR_CODE}'`);
+  if (vars.INTERIOR_CODE) lines.push(`INTERIOR_CODE='${vars.INTERIOR_CODE}'`);
+  if (vars.MANUFACTURE_DATE) lines.push(`MANUFACTURE_DATE='${vars.MANUFACTURE_DATE}'`);
   await Deno.writeTextFile(ENV_PATH, lines.join("\n") + "\n");
 }
 
@@ -53,14 +35,62 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
+// Simple cookie jar for session management
+const cookieJar: Map<string, string> = new Map();
+
+function parseCookies(setCookieHeaders: string[]): void {
+  for (const header of setCookieHeaders) {
+    const parts = header.split(";")[0]; // Get just the name=value part
+    const [name, value] = parts.split("=", 2);
+    if (name && value !== undefined) {
+      cookieJar.set(name.trim(), value.trim());
+    }
+  }
+}
+
+function getCookieHeader(): string {
+  const cookies: string[] = [];
+  for (const [name, value] of cookieJar) {
+    cookies.push(`${name}=${value}`);
+  }
+  return cookies.join("; ");
+}
+
+async function fetchWithRetry(
+  url: string,
+  options: { maxRetries?: number; referer?: string } = {}
+): Promise<Response> {
+  const { maxRetries = 3, referer } = options;
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-    });
+    const headers: Record<string, string> = {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Cache-Control": "no-cache",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": referer ? "same-origin" : "none",
+      "Sec-Fetch-User": "?1",
+      "Upgrade-Insecure-Requests": "1",
+    };
+
+    const cookieHeader = getCookieHeader();
+    if (cookieHeader) {
+      headers["Cookie"] = cookieHeader;
+    }
+    if (referer) {
+      headers["Referer"] = referer;
+    }
+
+    const response = await fetch(url, { headers });
+
+    // Store any cookies from response
+    const setCookies = response.headers.getSetCookie?.() ?? [];
+    if (setCookies.length > 0) {
+      parseCookies(setCookies);
+    }
 
     if (response.ok) {
       return response;
@@ -87,56 +117,60 @@ async function fetchVehicleInfo(frameNo: string): Promise<{
   interiorCode: string;
   manufactureDate: string;
 }> {
-  // Submit frame number to the search page
-  const searchUrl = `https://mitsubishi.epc-data.com/delica_space_gear/?frame_no=${encodeURIComponent(frameNo)}`;
+  const baseUrl = "https://mitsubishi.epc-data.com";
+  const rootUrl = `${baseUrl}/delica_space_gear/`;
+  const searchUrl = `${baseUrl}/search_frame/?frame_no=${encodeURIComponent(frameNo)}`;
 
   console.log(`Fetching vehicle info for frame: ${frameNo}`);
-  console.log(`URL: ${searchUrl}`);
 
-  const response = await fetchWithRetry(searchUrl);
+  console.log(`Submitting search at ${searchUrl}`);
+  const response = await fetchWithRetry(searchUrl, { referer: rootUrl });
 
   const html = await response.text();
   const $ = loadCheerio(html);
 
   // Extract frame name and trim code from the redirect URL or page content
   // The URL pattern is: /delica_space_gear/{frame_name}/{trim_code}/
+  let frameName = "";
+  let trimCode = "";
+
+  // First, check if we were redirected to a vehicle-specific page
   const finalUrl = response.url;
   const urlMatch = finalUrl.match(/\/delica_space_gear\/([^/]+)\/([^/]+)/);
 
-  if (!urlMatch) {
-    throw new Error(`Could not parse vehicle URL: ${finalUrl}`);
+  if (urlMatch) {
+    frameName = urlMatch[1];
+    trimCode = urlMatch[2];
+  } else {
+    // No redirect - parse the HTML for a link to the vehicle page
+    // Look for links matching the pattern /delica_space_gear/{frame}/{trim}/
+    const vehicleLink = $('a[href*="/delica_space_gear/"]').filter((_, el) => {
+      const href = $(el).attr("href") || "";
+      return /\/delica_space_gear\/[^/]+\/[^/]+/.test(href);
+    }).first();
+
+    if (vehicleLink.length) {
+      const href = vehicleLink.attr("href") || "";
+      const linkMatch = href.match(/\/delica_space_gear\/([^/]+)\/([^/]+)/);
+      if (linkMatch) {
+        frameName = linkMatch[1];
+        trimCode = linkMatch[2];
+      }
+    }
   }
 
-  const frameName = urlMatch[1];
-  const trimCode = urlMatch[2];
+  if (!frameName || !trimCode) {
+    throw new Error(`Could not parse vehicle URL: ${finalUrl}`);
+  }
 
   // Extract vehicle name from page title or header
   // Format: "Delica Space Gear - HSEUE9 Chamonix (HIGH-ROOF), 4CA/T complectation"
   let vehicleName = "";
 
-  // Try page title first
-  const pageTitle = $("title").text().trim();
-  if (pageTitle && pageTitle.includes("Delica")) {
-    // Clean up the title - remove site name suffix if present
-    vehicleName = pageTitle.replace(/\s*[-|].*epc-data.*$/i, "").trim();
-  }
-
   // Try h1 or header element
-  if (!vehicleName) {
-    const h1Text = $("h1").first().text().trim();
-    if (h1Text && h1Text.includes("Delica")) {
-      vehicleName = h1Text;
-    }
-  }
-
-  // Try breadcrumb or complectation info
-  if (!vehicleName) {
-    $(".breadcrumb a, .complectation, #complectation").each((_, el) => {
-      const text = $(el).text().trim();
-      if (text.includes("Delica") || text.includes(trimCode.toUpperCase())) {
-        vehicleName = vehicleName || text;
-      }
-    });
+  const h1Text = $("h1").first().text().trim();
+  if (h1Text && h1Text.includes("Delica")) {
+    vehicleName = h1Text.replace('Delica Space Gear -', '').trim();
   }
 
   // Parse vehicle details from the page
@@ -227,7 +261,7 @@ async function main() {
   console.log("=================================\n");
 
   // Load existing .env
-  let env = await loadEnv();
+  const env = await loadEnv({envPath: ENV_PATH});
 
   // Prompt for frame number if not set
   if (!env.FRAME_NO) {

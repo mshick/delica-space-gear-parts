@@ -9,3 +9,5 @@ data/
 
 # Node (for TUI)
 node_modules/
+
+*.bak
