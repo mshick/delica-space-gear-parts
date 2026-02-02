@@ -40,12 +40,14 @@ type HomeModel struct {
 	db            *db.DB
 	groups        []db.Group
 	bookmarkCount int
+	noteCount     int
 	menu          *ui.Menu
 }
 
 func NewHomeModel(database *db.DB) *HomeModel {
 	groups, _ := database.GetGroups()
 	bookmarkCount, _ := database.GetBookmarkCount()
+	noteCount, _ := database.GetNoteCount()
 
 	// Build menu items
 	var items []ui.MenuItem
@@ -59,6 +61,12 @@ func NewHomeModel(database *db.DB) *HomeModel {
 	}
 	items = append(items, ui.MenuItem{ID: "__bookmarks__", Label: "* Bookmarks", Hint: bookmarkHint})
 
+	noteHint := ""
+	if noteCount > 0 {
+		noteHint = fmt.Sprintf("%d parts", noteCount)
+	}
+	items = append(items, ui.MenuItem{ID: "__notes__", Label: "# Notes", Hint: noteHint})
+
 	// Separator (empty item that we'll skip in navigation)
 	items = append(items, ui.MenuItem{ID: "__separator__", Label: ""})
 
@@ -71,6 +79,7 @@ func NewHomeModel(database *db.DB) *HomeModel {
 		db:            database,
 		groups:        groups,
 		bookmarkCount: bookmarkCount,
+		noteCount:     noteCount,
 		menu:          ui.NewMenu(items),
 	}
 }
@@ -100,6 +109,9 @@ func (m *HomeModel) Update(msg tea.Msg) (*HomeModel, tea.Cmd, *Screen) {
 					return m, nil, &s
 				case "__bookmarks__":
 					s := BookmarksScreen()
+					return m, nil, &s
+				case "__notes__":
+					s := NotesScreen()
 					return m, nil, &s
 				case "__separator__":
 					// Do nothing
