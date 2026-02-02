@@ -82,6 +82,17 @@ export async function createSchema(client: Client): Promise<void> {
     )
   `);
 
+  // Notes table
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      part_id INTEGER NOT NULL UNIQUE,
+      content TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Scrape progress table
   await client.execute(`
     CREATE TABLE IF NOT EXISTS scrape_progress (
