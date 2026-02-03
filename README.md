@@ -14,9 +14,9 @@ A tool for scraping and browsing parts data from the Mitsubishi Delica Electroni
 
 ## Prerequisites
 
-- [Deno](https://deno.land/) (v1.40+)
-- [Go](https://golang.org/) (v1.21+)
-- [Ghostty](https://ghostty.org) (or any terminal that supports [kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol/))
+- [Deno](https://deno.land/) (v1.40+) (`brew install deno` on macOS)
+- [Go](https://golang.org/) (v1.21+) (`brew install go` on macOS)
+- [Ghostty](https://ghostty.org) (or any terminal that supports [kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol/)) (`brew isntall ghostty` on macOS)
 
 ## Quick Start
 
