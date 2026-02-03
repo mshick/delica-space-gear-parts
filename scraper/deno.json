@@ -8,7 +8,8 @@
     "status": "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi --env-file=../.env --allow-env src/main.ts status",
     "retry": "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi --env-file=../.env --allow-env src/main.ts retry",
     "migrate": "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi --env-file=../.env --allow-env src/main.ts migrate",
-    "query": "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi --env-file=../.env --allow-env src/main.ts query"
+    "query": "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi --env-file=../.env --allow-env src/main.ts query",
+    "fix-multi-diagram": "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi --env-file=../.env scripts/fix-multi-diagram-parts.ts"
   },
   "imports": {
     "@libsql/client": "npm:@libsql/client@^0.14.0",

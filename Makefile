@@ -29,7 +29,7 @@ scrape:
 status:
 	cd scraper && deno task status
 
-tui: build
+start: build
 	./tui/delica-tui -data ./data
 
 build:

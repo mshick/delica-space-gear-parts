@@ -384,12 +384,14 @@ export function parseDetailListSections(html: string, baseUrl: string): DetailLi
     }
 
     // Extract detail page IDs from links (supports comma-separated IDs like 723107,723115)
-    const detailPageIds: string[] = [];
-    $td.find("a").each((_, a) => {
-      const href = $(a).attr("href") || "";
+    // Use a Set to deduplicate within this section (same link can appear multiple times in map areas)
+    // But we intentionally DON'T deduplicate across sections - a detail page can appear in multiple diagrams
+    const detailPageIdSet = new Set<string>();
+    $td.find("a, area").each((_, el) => {
+      const href = $(el).attr("href") || "";
       const match = href.match(/\/(\d+(?:,\d+)*)\/?(?:\?|$)/);
       if (match) {
-        detailPageIds.push(match[1]);
+        detailPageIdSet.add(match[1]);
       }
     });
 
@@ -397,7 +399,7 @@ export function parseDetailListSections(html: string, baseUrl: string): DetailLi
       heading,
       slug,
       imageUrl,
-      detailPageIds,
+      detailPageIds: Array.from(detailPageIdSet),
     });
   });
 

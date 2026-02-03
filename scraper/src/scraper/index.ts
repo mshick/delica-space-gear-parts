@@ -34,7 +34,8 @@ export class Scraper {
   private processedCount = 0;
 
   // Maps detail_page_id to pre-created diagram and subgroup IDs
-  private diagramGroupMap: Map<string, { diagramId: string; subgroupId: string }> = new Map();
+  // A detail page can appear in multiple diagrams, so we store an array
+  private diagramGroupMap: Map<string, Array<{ diagramId: string; subgroupId: string }>> = new Map();
 
   constructor(client: Client, config: ScraperConfig) {
     this.client = client;
@@ -227,8 +228,11 @@ export class Scraper {
         });
 
         // Map each detail page ID to this diagram/subgroup
+        // A detail page can appear in multiple diagrams, so we accumulate mappings
         for (const detailId of sections[0].detailPageIds) {
-          this.diagramGroupMap.set(detailId, { diagramId, subgroupId });
+          const existing = this.diagramGroupMap.get(detailId) || [];
+          existing.push({ diagramId, subgroupId });
+          this.diagramGroupMap.set(detailId, existing);
         }
         console.log(`    Diagram created with ${sections[0].detailPageIds.length} parts`);
       }
@@ -260,8 +264,11 @@ export class Scraper {
         });
 
         // Map each detail page ID to this diagram/subgroup
+        // A detail page can appear in multiple diagrams, so we accumulate mappings
         for (const detailId of section.detailPageIds) {
-          this.diagramGroupMap.set(detailId, { diagramId, subgroupId });
+          const existing = this.diagramGroupMap.get(detailId) || [];
+          existing.push({ diagramId, subgroupId });
+          this.diagramGroupMap.set(detailId, existing);
         }
 
         console.log(`    - "${section.heading}": ${section.detailPageIds.length} parts`);
@@ -279,34 +286,38 @@ export class Scraper {
     const groupSlug = pathParts[3] || "unknown";
     const subgroupSlug = pathParts[4];
 
-    // Look up pre-created diagram/subgroup from subgroup page processing
-    const mapping = detailPageId ? this.diagramGroupMap.get(detailPageId) : null;
+    // Look up pre-created diagram/subgroup mappings from subgroup page processing
+    // A detail page can appear in multiple diagrams
+    const mappings = detailPageId ? this.diagramGroupMap.get(detailPageId) : null;
 
-    if (mapping) {
-      // Diagram already exists - just parse and insert parts
-      const { diagram, parts } = parsePartsPage(html, url, mapping.diagramId);
+    if (mappings && mappings.length > 0) {
+      // Parse parts once, then insert for each diagram that references this detail page
+      const { diagram, parts } = parsePartsPage(html, url, mappings[0].diagramId);
       const pnc = parts.length > 0 ? parts[0].pnc : null;
 
-      console.log(`  Parts page: ${diagram.name}, PNC: ${pnc || "unknown"}, ${parts.length} variant(s) found`);
+      console.log(`  Parts page: ${diagram.name}, PNC: ${pnc || "unknown"}, ${parts.length} variant(s) found, ${mappings.length} diagram(s)`);
 
       if (parts.length > 0) {
-        const partRecords: Part[] = parts.map((p) => ({
-          detail_page_id: detailPageId,
-          part_number: p.partNumber,
-          pnc: p.pnc,
-          description: p.description,
-          ref_number: p.refNumber,
-          quantity: p.quantity,
-          spec: p.spec,
-          notes: p.notes,
-          color: p.color,
-          model_date_range: p.modelDateRange,
-          diagram_id: mapping.diagramId,
-          group_id: groupSlug,
-          subgroup_id: mapping.subgroupId,
-          replacement_part_number: null,
-        }));
-        await insertParts(this.client, partRecords);
+        // Insert parts for EACH diagram that links to this detail page
+        for (const mapping of mappings) {
+          const partRecords: Part[] = parts.map((p) => ({
+            detail_page_id: detailPageId,
+            part_number: p.partNumber,
+            pnc: p.pnc,
+            description: p.description,
+            ref_number: p.refNumber,
+            quantity: p.quantity,
+            spec: p.spec,
+            notes: p.notes,
+            color: p.color,
+            model_date_range: p.modelDateRange,
+            diagram_id: mapping.diagramId,
+            group_id: groupSlug,
+            subgroup_id: mapping.subgroupId,
+            replacement_part_number: null,
+          }));
+          await insertParts(this.client, partRecords);
+        }
       }
     } else {
       // Fallback: no mapping found (page visited before subgroup page, or single-page subgroup)

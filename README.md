@@ -28,7 +28,7 @@ make bootstrap
 make scrape
 
 # 3. Browse parts
-make tui
+make start
 ```
 
 ## Commands
@@ -37,7 +37,7 @@ make tui
 |---------|-------------|
 | `make bootstrap` | Configure vehicle frame number and fetch vehicle details |
 | `make scrape` | Start or resume scraping parts data from the EPC |
-| `make tui` | Launch the terminal user interface |
+| `make start` | Launch the terminal user interface |
 | `make status` | Show scraping progress and statistics |
 | `make migrate` | Run database migrations |
 | `make build` | Build the TUI binary |
@@ -59,7 +59,7 @@ MANUFACTURE_DATE=1999.07.3
 
 Run `make bootstrap` to set up this file. It will prompt for your frame number if not already configured.
 
-## TUI Navigation
+## App Navigation
 
 | Key | Action |
 |-----|--------|
