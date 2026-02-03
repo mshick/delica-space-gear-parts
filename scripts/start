@@ -1,0 +1,3 @@
+#! /bin/sh
+
+./tui/delica-tui -data ./data

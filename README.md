@@ -22,23 +22,23 @@ A tool for scraping and browsing parts data from the Mitsubishi Delica Electroni
 
 ```bash
 # 1. Configure your vehicle
-make bootstrap
+./scripts/bootstrap
 
-# 2. Scrape parts data (takes a while on first run)
-make scrape
+# 2. Scrape parts data (takes a while)
+./scripts/scrape
 
 # 3. Browse parts
-make start
+./scripts/start
 ```
 
-## Commands
+## Dev Commands
 
-| Command | Description |
-|---------|-------------|
+| Command               | Description                                              |
+| --------------------- | -------------------------------------------------------- |
 | `make bootstrap` | Configure vehicle frame number and fetch vehicle details |
-| `make scrape` | Start or resume scraping parts data from the EPC |
-| `make start` | Launch the terminal user interface |
-| `make status` | Show scraping progress and statistics |
+| `make scrape`    | Start or resume scraping parts data from the EPC         |
+| `make status`    | Show scraping progress and statistics                    |
+| `make start`     | Launch the terminal user interface                       |
 | `make migrate` | Run database migrations |
 | `make build` | Build the TUI binary |
 | `make clean` | Remove build artifacts and data |
@@ -57,7 +57,7 @@ INTERIOR_CODE=57A
 MANUFACTURE_DATE=1999.07.3
 ```
 
-Run `make bootstrap` to set up this file. It will prompt for your frame number if not already configured.
+Run `./scripts/bootstrap` to set up this file. It will prompt for your frame number if not already configured.
 
 ## App Navigation
 
