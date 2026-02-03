@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { slugify } from "../utils.ts";
+import { slugify, cleanDescription } from "../utils.ts";
 import type {
   ParsedGroup,
   ParsedDiagramPage,
@@ -523,7 +523,7 @@ export function parsePartsPage(
       const part: ParsedPart = {
         partNumber,
         pnc: cleanPnc(pnc),
-        description: cleanField(description),
+        description: cleanDescription(cleanField(description)),
         refNumber: cleanField(refNumber),
         quantity,
         spec: cleanField(spec),

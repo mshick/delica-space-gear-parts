@@ -36,6 +36,7 @@ export function cleanSubgroupName(name: string): string {
   cleaned = cleaned.replace(/\s*\(\s*\)/g, ""); // Empty parentheses
   cleaned = cleaned.replace(/\s+-\s*$/g, ""); // Trailing " -"
   cleaned = cleaned.replace(/^\s*-\s+/g, ""); // Leading "- "
+  cleaned = cleaned.replace(/,(?!\s)/g, ", "); // Ensure comma-space
   cleaned = cleaned.replace(/\s{2,}/g, " "); // Multiple spaces
   cleaned = cleaned.replace(/\s*-\s*-\s*/g, " - "); // Double dashes
 
@@ -48,6 +49,29 @@ export function cleanSubgroupName(name: string): string {
   cleaned = cleaned.replace(/^\(([^)]+)\)$/g, "$1");
 
   return cleaned.trim();
+}
+
+/**
+ * Clean and normalize part descriptions.
+ * - Ensures commas are followed by a space
+ * - Collapses multiple spaces
+ * - Trims leading/trailing whitespace
+ */
+export function cleanDescription(description: string | null): string | null {
+  if (!description) return null;
+
+  let cleaned = description;
+
+  // Ensure commas are followed by a space (but not if already followed by space)
+  cleaned = cleaned.replace(/,(?!\s)/g, ", ");
+
+  // Collapse multiple spaces into single space
+  cleaned = cleaned.replace(/\s{2,}/g, " ");
+
+  // Trim leading/trailing whitespace
+  cleaned = cleaned.trim();
+
+  return cleaned || null;
 }
 
 /**
